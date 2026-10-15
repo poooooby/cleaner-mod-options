@@ -1,0 +1,5 @@
+# exact relative paths only (modkit matches whole paths, no globs);
+# add each new dist/ package name here when the version bumps
+tests/cleaner_mod_options_test.lua
+dist/cleaner_mod_options-1.0.0.modpkg
+dist/cleaner_mod_options-1.0.0.zip

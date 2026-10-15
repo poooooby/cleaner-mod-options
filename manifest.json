@@ -1,0 +1,19 @@
+{
+  "id": "cleaner_mod_options",
+  "name": "Cleaner Mod Options",
+  "version": "1.0.0",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "category": "UI",
+  "games": ["all"],
+  "game_version": ">=0.3.0",
+  "priority": 500,
+  "dependencies": [],
+  "optional_dependencies": [],
+  "conflicts": [],
+  "options_schema": "options.lua",
+  "permissions": ["engine_internals"],
+  "github": "poooooby/cleaner-mod-options",
+  "description": "Tidies the in-game mod list (START > OPTIONS > MODS): two settings, HIDE DISABLED and HIDE OTHER GAMES, hide mods that were disabled at boot and mods that cannot run on the game being played. Both are OFF until turned on, in OPTIONS > MODS > Cleaner Mod Options. A mod toggled this session stays visible until restart, mods forced with TRY HERE ANYWAY are never hidden, and the desktop launcher's list is untouched."
+}
