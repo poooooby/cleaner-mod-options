@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Fixed: after reloading mods with Cleaner Mod Options uninstalled, disabled
+  or failing to load, the mod list and the INSTALLED count could stay
+  filtered. They now go back to showing every mod.
+
 ## 1.0.0
 
 - First release.

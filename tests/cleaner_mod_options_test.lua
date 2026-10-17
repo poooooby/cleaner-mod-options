@@ -4,7 +4,8 @@
 -- Asserts the mod's stated effect: the ManagerState mod list hides disabled
 -- and other-game mods only while the matching option is ON, staged and
 -- TRY HERE ANYWAY mods always stay, headers prune with their mods, and the
--- options screen's INSTALLED count follows the same filter.
+-- options screen's INSTALLED count follows the same filter. A reload that
+-- drops this mod leaves its engine patches inert, so the list goes vanilla.
 package.path = "./?.lua;./?/init.lua;" .. package.path
 local T = require("tests.modkit")
 
@@ -103,6 +104,26 @@ rows = stateWith({}):modRows()
 T.eq(#rows, 1, "empty list: one row")
 T.eq(rows[1].header and rows[1].label, "NO MODS INSTALLED",
   "vanilla empty-list header kept")
+
+-- a reload without this mod leaves the ManagerState wrapper and its old
+-- options behind; it must hand back the vanilla list whenever the live
+-- loader does not have this mod loaded
+local function staleState(liveLoader)
+  return setmetatable({ status = { available = avail },
+                        game = { mods = liveLoader } },
+                      { __index = ManagerState })
+end
+setOptions({ hide_disabled = "on", hide_other_games = "on" })
+local vanilla = "delta,echo,alpha,bravo,charlie"
+T.eq(ids(staleState({ mods = {} }):modRows()), vanilla,
+  "uninstalled then reloaded: list is vanilla despite options ON")
+T.eq(ids(staleState({ mods = { cleaner_mod_options = { state = "disabled" } } })
+  :modRows()), vanilla, "disabled then reloaded: list is vanilla")
+T.eq(ids(staleState({ mods = { cleaner_mod_options = { state = "failed",
+  failed = true } } }):modRows()), vanilla, "failed on reload: list is vanilla")
+T.eq(ids(staleState(nil):modRows()), vanilla, "no live loader: list is vanilla")
+T.eq(ids(stateWith(avail):modRows()), "echo,alpha,charlie",
+  "still loaded: filters apply")
 
 -- the options screen's INSTALLED count follows the same filter (Gen 1/2 hook)
 local Runtime = require("src.mods.Runtime")

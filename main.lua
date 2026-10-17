@@ -43,8 +43,22 @@ end
 local SLOT = "__cleaner_mod_options"
 
 return function(mod)
+  local MOD_ID = mod.id or "cleaner_mod_options"
+
   local schema = loadSibling(mod, "options.lua")
   if type(schema) == "table" then mod.options:define(schema) end
+
+  -- A reload that drops this mod (uninstalled, disabled, failed) builds a new
+  -- loader without re-running this entry, so the module-level wrappers keep
+  -- the old `apply` and its old option values. They filter only while the
+  -- game's live loader still has this mod loaded; otherwise the list and
+  -- count are vanilla. No game or loader to ask means vanilla too.
+  local function isLive(game)
+    local loader = type(game) == "table" and game.mods
+    local mods = type(loader) == "table" and loader.mods
+    local rec = type(mods) == "table" and mods[MOD_ID]
+    return type(rec) == "table" and rec.state == "loaded" and not rec.failed
+  end
 
   local warned = {}
   local function warnOnce(key, fmt, ...)
@@ -164,6 +178,7 @@ return function(mod)
     end
     slot.apply = function(state, rows)
       if type(rows) ~= "table" then return rows end
+      if not isLive(type(state) == "table" and state.game) then return rows end
       local hideDisabled = optOn("hide_disabled")
       local hideOther = optOn("hide_other_games")
       if not (hideDisabled or hideOther) then return rows end
@@ -182,27 +197,31 @@ return function(mod)
 
   -- ------- "N INSTALLED" on the options screen
 
-  -- wraps a mods row's value closure; the vanilla label is the fallback
-  local function wrapCountValue(row, statusOf)
+  -- wraps a mods row's value closure; the vanilla label is the fallback.
+  -- `gated` is for wrappers that outlive a reload (see isLive).
+  local function wrapCountValue(row, gameOf, gated)
     local origValue = row.value
     row.value = function(ctx, ...)
-      local ok, label = pcall(function()
-        return fmt("%d INSTALLED", countVisible(statusOf(ctx)))
-      end)
-      if ok and label ~= nil then return label end
+      local game = gameOf(ctx)
+      if not gated or isLive(game) then
+        local ok, label = pcall(function()
+          return fmt("%d INSTALLED", countVisible(game and game.modStatus))
+        end)
+        if ok and label ~= nil then return label end
+      end
       return origValue(ctx, ...)
     end
   end
 
   -- Gen 1/2: the supported hook. Rows are rebuilt per menu open, so wrapping
-  -- in place never stacks.
+  -- in place never stacks. The hook dies with its loader, so it needs no gate.
   mod.hooks:wrap("ui.options.rows", function(next_, game, rows)
     local out = next_(game, rows)
     if type(out) ~= "table" then return out end
     for _, row in ipairs(out) do
       if type(row) == "table" and row.id == "mods"
         and type(row.value) == "function" then
-        wrapCountValue(row, function(g) return g and g.modStatus end)
+        wrapCountValue(row, function(g) return g end, false)
         break
       end
     end
@@ -228,7 +247,7 @@ return function(mod)
         for _, row in ipairs(type(rows) == "table" and rows or {}) do
           if type(row) == "table" and row.id == "mods"
             and type(row.value) == "function" then
-            wrapCountValue(row, function(c) return c and c.game and c.game.modStatus end)
+            wrapCountValue(row, function(c) return c and c.game end, true)
             return
           end
         end
